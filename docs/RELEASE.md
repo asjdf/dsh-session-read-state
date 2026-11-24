@@ -80,10 +80,14 @@ npm pack
 
 ## CI 做什么
 
-`Release` 工作流（`.github/workflows/release.yaml`）在推送到 `main` 时运行：
+`Release` 工作流（`.github/workflows/release.yaml`）在推送到 `main` 时运行，也会在每个
+PR 上运行：
 
 1. `checks`：解析插件包清单与两份语言文件、对 `client.js` 和 `index.js` 做语法检查、
    用 `commitlint` 校验最新提交。任何一项失败，发布不会开始。
+1. `release-guard`：同样的清单与语法校验，作为 `main` 的必需检查——PR 未通过、或分支
+   未与 `main` 同步时不能合并。`main` 只接受 PR 合入，禁止强推和删除分支，因此发版分支
+   上的提交一定先经过校验。
 2. `release`：找不到上一个标签就从头读取提交，找到后则只读取标签之后的提交；没有
    `fix:`/`feat:`/破坏性变更时直接结束，有则升版本、写 `CHANGELOG.md`、打标签、
    创建 Release，并把版本与变更日志写回 `main`。

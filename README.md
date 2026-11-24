@@ -55,3 +55,9 @@ docs/RELEASE.md                   发布流程
 
 插件的功能、限制、图标许可与目录说明见
 [packages/dsh-session-read-state/README.md](packages/dsh-session-read-state/README.md)。
+
+## 发版
+
+本仓使用 semantic-release：推送到 `main` 后由提交信息决定版本号，并在 GitHub Release
+上附带插件包 tarball。第一个正式版本由 `v0.0.1` 基线起算，详见
+[docs/RELEASE.md](docs/RELEASE.md)。

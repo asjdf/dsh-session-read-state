@@ -1,0 +1,36 @@
+# From: https://github.com/asjdf/semantic-release-go-demo
+name: Commits
+
+# 每个 PR 都先跑一次检查：PR 分支的提交与合并后的结果都必须通过语法/清单/提交信息校验。
+# 这道检查同时作为 main 的保护检查，未通过时不能合并。
+on:
+    pull_request:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    checks:
+        name: checks
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+            - run: npm ci
+            # 插件包清单与前端入口至少要被解析一次，避免合并一个装不上的版本。
+            - name: Validate the plugin package
+              run: |
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/package.json', 'utf8'))"
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/locale/zh.json', 'utf8'))"
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/locale/en.json', 'utf8'))"
+                  node --check packages/dsh-session-read-state/client.js
+                  node --check packages/dsh-session-read-state/index.js
+            # 本次 PR 的每个提交都必须符合 Conventional Commits，否则合并后的发版无法判断版本号。
+            - name: Commit messages
+              run: npx commitlint --from "origin/${{ github.base_ref }}" --to HEAD --verbose
