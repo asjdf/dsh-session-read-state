@@ -11,9 +11,14 @@ right-click a session to mark it read or unread, and an unread session keeps a
 
 ## Install
 
+Every release attaches the packed plugin `dsh-session-read-state-X.Y.Z.tgz` to its
+GitHub release; download it and install by path, without npm:
+
 ```text
-dsh plugin add dsh-session-read-state
+dsh plugin add ./dsh-session-read-state-X.Y.Z.tgz
 ```
+
+Or install the checkout directly: `dsh plugin add ./packages/dsh-session-read-state`.
 
 ## Releases
 
@@ -22,6 +27,6 @@ Versions come from commit messages, through
 patch, `feat:` a minor, a `!` plus a `BREAKING CHANGE:` footer a major, and
 `docs:`, `chore:`, and `refactor:` publish nothing. Pushing to `main` runs the
 `Release` workflow: manifest and entry checks, a commitlint check, then the
-version bump, `CHANGELOG.md`, the `vX.Y.Z` tag, and the GitHub release.
-Releases currently land on GitHub only; adding `@semantic-release/npm` with an
-`NPM_TOKEN` enables the npm publish step. See [docs/RELEASE.md](docs/RELEASE.md).
+version bump, `CHANGELOG.md`, the `vX.Y.Z` tag, the GitHub release, and the
+attached plugin tarball. Releases are entirely on GitHub; no npm account or
+token is needed. See [docs/RELEASE.md](docs/RELEASE.md).

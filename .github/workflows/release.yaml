@@ -2,7 +2,8 @@
 name: Release
 
 # 每次推送到 main 都会运行 semantic-release，由提交信息决定这次推送要不要发版。
-# 当前只发 GitHub（标签 + Release + CHANGELOG）；要同时发布到 npm，见 docs/RELEASE.md。
+# 发布只落在 GitHub：标签 + Release + CHANGELOG，插件包 tarball 作为 Release 附件。
+# 不发布到 npm；安装用 Release 附件或 checkout，见 docs/RELEASE.md。
 on:
     push:
         branches: [main]

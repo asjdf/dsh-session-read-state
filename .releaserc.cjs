@@ -5,6 +5,8 @@ const config = {
     plugins: [
         '@semantic-release/commit-analyzer',
         '@semantic-release/release-notes-generator',
+        // 发版时把插件包打成 tarball，作为 GitHub Release 的附件；不发布到 npm。
+        ['./scripts/pack-release.cjs', {}],
         [
             '@semantic-release/github',
             {
