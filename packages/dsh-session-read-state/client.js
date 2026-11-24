@@ -26,17 +26,10 @@ window.__ModuleLoader__.load({
   id: 'dsh-session-read-state',
   factory(require) {
     const React = require('react');
-    // The shared glyph set the shipped Session rows use (Rename, Pin, Archive,
-    // Fork, Copy). Loading it only when it cached throws keeps the plugin
-    // usable in a page that boots without it; the `dsh.client.inject` edge in
-    // package.json is what makes it cached before this module runs.
-    let primitives;
-    try {
-      primitives = require('@deepseek-ai/dsh-client-ui-primitives');
-    } catch (error) {
-      primitives = undefined;
-      console.warn('session-read-state: icon set unavailable, the menu rows draw without a glyph:', error);
-    }
+    // The menu glyphs are plain SVG drawn here. DSH's own icon set is not part
+    // of every page's shared module table, and requiring it made the whole
+    // plugin fail on pages that lack it, so this module requires nothing but
+    // React.
     const NS = 'sessionReadState';
     const STORAGE_KEY = 'dsh-session-read-state:v1';
     const PILL_ATTR = 'data-dsh-read-state-pill';
@@ -436,37 +429,30 @@ window.__ModuleLoader__.load({
           return () => window.removeEventListener('contextmenu', onContextMenu, true);
         }, 'session-read-state: row context menu');
 
-        // The leading glyph of the menu row: the shipped eye pair the
-        // primitives file uses for "shown / hidden". An action's icon crosses
-        // the popup as `{ key, src? }` only, so the glyph is what the popup
-        // renders for the key through `contextMenu.icon`; the fallback
-        // registration below covers a page without the shared icon set.
+        // The leading glyph of the menu row: an eye, crossed out for the
+        // "mark read" row and open for "mark unread". It is drawn here from
+        // paths alone, in the current text color, so it inherits the menu's
+        // theme in light and dark alike.
         const ICON_SIZE = 14;
-        const eyeIcon = (kind) => {
-          const icons = kind === 'read'
-            ? primitives === undefined ? undefined : [primitives.IconEyeOffOutlineRegular, primitives.IconEyeOffOutlineMedium]
-            : primitives === undefined ? undefined : [primitives.IconEyeOutlineRegular, primitives.IconEyeOutlineMedium];
-          const Icon = icons === undefined ? undefined : icons[1] ?? icons[0];
-          if (Icon !== undefined) return () => React.createElement(Icon, { size: ICON_SIZE });
-          const unread = kind === 'unread';
-          return () => React.createElement('svg', {
-            viewBox: '0 0 16 16',
-            width: ICON_SIZE,
-            height: ICON_SIZE,
-            fill: 'none',
-            stroke: 'currentColor',
-            strokeWidth: 1.3,
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round',
-            'aria-hidden': true,
-          }, [
-            React.createElement('path', { key: 'lens', d: 'M1.7 8s2.4-4.1 6.3-4.1S14.3 8 14.3 8s-2.4 4.1-6.3 4.1S1.7 8 1.7 8Z' }),
-            React.createElement('circle', { key: 'pupil', cx: 8, cy: 8, r: 1.8 }),
-            React.createElement('circle', {
-              key: 'dot', cx: 13.2, cy: 2.8, r: 2.1, fill: unread ? 'currentColor' : 'none', stroke: 'currentColor',
-            }),
-          ]);
-        };
+        const eyeIcon = (kind) => () => React.createElement('svg', {
+          viewBox: '0 0 16 16',
+          width: ICON_SIZE,
+          height: ICON_SIZE,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.3,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': true,
+        }, [
+          React.createElement('path', {
+            key: 'lens', d: 'M1.5 8s2.5-4.4 6.5-4.4S14.5 8 14.5 8s-2.5 4.4-6.5 4.4S1.5 8 1.5 8Z',
+          }),
+          React.createElement('circle', { key: 'pupil', cx: 8, cy: 8, r: 2 }),
+          ...kind === 'read'
+            ? [React.createElement('path', { key: 'slash', d: 'm2.4 2.4 11.2 11.2' })]
+            : [],
+        ]);
         const readIcon = eyeIcon('read');
         const unreadIcon = eyeIcon('unread');
         // One row over the captured Session, after Fork and before Copy Session
