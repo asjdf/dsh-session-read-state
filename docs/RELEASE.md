@@ -69,6 +69,10 @@ cd packages/dsh-session-read-state
 npm pack
 ```
 
+发版时 tarball 由 `scripts/pack-release` 生成：它临时把包内版本号对齐到即将发布的版本
+（这样文件名、包内 `version` 与标签 `vX.Y.Z` 一致），打包完成后立即还原文件，因此仓库
+里 `package.json` 的版本仍由回写流程维护。
+
 产物是 `dsh-session-read-state-X.Y.Z.tgz`，内容与 `package.json` 的 `files` 一致：
 `client.js`、`index.js`、`cordis.patch.yml`、`locale/*.json`、`docs/*`、`icon.svg`、
 `README.md`。`node_modules` 与测试文件不会被打进去。

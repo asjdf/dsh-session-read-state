@@ -10,9 +10,9 @@ const config = {
         [
             '@semantic-release/github',
             {
-                successComment: false, // tmp fix https://github.com/semantic-release/github/pull/857
-                failComment: false,
-                failTitle: false,
+                // 不在 issue/PR 上留评论、失败时也不自动开 issue，避免刷屏。
+                successCommentCondition: '<% return false; %>',
+                failCommentCondition: '<% return false; %>',
             },
         ],
     ],
