@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300">
+  <rect width="640" height="300" rx="20" fill="#f3f5f9"/>
+
+  <!-- 左侧：侧栏会话列表。第二行带了「新」标记。 -->
+  <rect x="48" y="48" width="264" height="40" rx="10" fill="#ffffff" stroke="#cfd8e3" stroke-width="1.5"/>
+  <circle cx="68" cy="68" r="5" fill="#c9d2dd"/>
+  <rect x="84" y="62" width="120" height="12" rx="6" fill="#3d4a5a"/>
+  <rect x="262" y="64" width="38" height="8" rx="4" fill="#cfd8e3"/>
+
+  <rect x="48" y="104" width="264" height="40" rx="10" fill="#eef3f9" stroke="#cfd8e3" stroke-width="1.5"/>
+  <circle cx="68" cy="124" r="5" fill="#8b98a8"/>
+  <rect x="84" y="118" width="86" height="12" rx="6" fill="#2c3746"/>
+  <rect x="178" y="116" width="22" height="16" rx="8" fill="#e3ecf8"/>
+  <path d="M183 120h8v8h-8z" fill="none" stroke="#2f6fb5" stroke-width="1.5"/>
+  <rect x="262" y="120" width="38" height="8" rx="4" fill="#b8c4d2"/>
+
+  <rect x="48" y="160" width="264" height="40" rx="10" fill="#ffffff" stroke="#cfd8e3" stroke-width="1.5"/>
+  <circle cx="68" cy="180" r="5" fill="#c9d2dd"/>
+  <rect x="84" y="174" width="104" height="12" rx="6" fill="#3d4a5a"/>
+  <rect x="262" y="176" width="38" height="8" rx="4" fill="#cfd8e3"/>
+
+  <!-- 右侧：该会话的菜单。「标为已读会话」是新增的一行，高亮表示选中。 -->
+  <rect x="360" y="88" width="232" height="168" rx="14" fill="#ffffff" stroke="#d4dce6" stroke-width="1.5"/>
+  <g stroke="#5b6b7c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M382 110v12m-6-6h12"/>
+    <path d="M386 140h12m-10-9h10v10h-10z" />
+  </g>
+  <rect x="406" y="112" width="96" height="12" rx="6" fill="#2c3746"/>
+  <rect x="406" y="142" width="84" height="12" rx="6" fill="#3d4a5a"/>
+
+  <rect x="368" y="168" width="216" height="36" rx="8" fill="#e8f0fb"/>
+  <g transform="translate(384 178) scale(1)" fill="none" stroke="#2f6fb5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 8s2.8-5 7-5 7 5 7 5-2.8 5-7 5S1 8 1 8Z"/>
+    <circle cx="8" cy="8" r="2.2"/>
+    <path d="m2 2 12 12"/>
+  </g>
+  <rect x="410" y="178" width="104" height="12" rx="6" fill="#1f4f8a"/>
+
+  <g stroke="#9aa6b4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M404 228h96"/>
+    <path d="M404 256h72"/>
+  </g>
+
+  <!-- 左下角：插件图标在 36px 瓦片上的实际观感。 -->
+  <g transform="translate(52 228) scale(1.15)"
+     fill="none" stroke="#5b6b7c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/>
+    <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
+    <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/>
+    <path d="m2 2 20 20"/>
+  </g>
+</svg>

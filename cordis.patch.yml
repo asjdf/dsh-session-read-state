@@ -1,0 +1,15 @@
+- insert:
+    - id: session-read-state
+      name: 'dsh-session-read-state'
+# A local directory plugin carries no service to wait for, so it is enabled
+# without this row. Inserting it here puts the row into the composed Loader
+# tree on every start; a second row for the same plugin would fail activation.
+- id: session-read-state
+  name: 'dsh-session-read-state'
+  # The Web Client publishes each package's client bundle by file metadata
+  # (mtime, ctime, size), not by content, and its Builder reads the bundle
+  # while this row activates. Declaring a bare `config` object here makes the
+  # Builder rewrite its own resolution of `./client` from the manifest just
+  # before that read, so the published bundle is fresh on this start rather
+  # than a stale bytes cache whose metadata happens to match.
+  config: {}
