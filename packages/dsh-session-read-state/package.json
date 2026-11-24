@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/asjdf/dsh-session-read-state.git"
+    "url": "git+https://github.com/asjdf/dsh-session-read-state.git",
+    "directory": "packages/dsh-session-read-state"
   },
   "description": "在侧栏会话上右键即可标为已读或未读，未读的会话在标题旁显示「新」标记。",
   "type": "module",

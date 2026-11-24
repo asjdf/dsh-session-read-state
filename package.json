@@ -2,6 +2,10 @@
     "name": "dsh-session-read-state",
     "private": true,
     "description": "DeepSeek Harness 插件：在侧栏会话上右键即可标为已读或未读",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/asjdf/dsh-session-read-state.git"
+    },
     "engines": {
         "node": ">=24.9.0"
     },
