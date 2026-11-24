@@ -69,9 +69,10 @@ cd packages/dsh-session-read-state
 npm pack
 ```
 
-发版时 tarball 由 `scripts/pack-release` 生成：它临时把包内版本号对齐到即将发布的版本
-（这样文件名、包内 `version` 与标签 `vX.Y.Z` 一致），打包完成后立即还原文件，因此仓库
-里 `package.json` 的版本仍由回写流程维护。
+发版时 tarball 由 `scripts/pack-release` 生成到 `dist/`，再由 `@semantic-release/github`
+的 `assets`（`dist/dsh-session-read-state-*.tgz`）上传为 Release 附件。打包前它会临时把
+包内版本号对齐到即将发布的版本（这样文件名、包内 `version` 与标签 `vX.Y.Z` 一致），
+打包完成后立即还原文件，因此仓库里 `package.json` 的版本仍由回写流程维护。
 
 产物是 `dsh-session-read-state-X.Y.Z.tgz`，内容与 `package.json` 的 `files` 一致：
 `client.js`、`index.js`、`cordis.patch.yml`、`locale/*.json`、`docs/*`、`icon.svg`、
