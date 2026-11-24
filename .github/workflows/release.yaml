@@ -1,7 +1,8 @@
 # From: https://github.com/asjdf/semantic-release-go-demo
 name: Release
 
-# 每次推送到 main 都会运行 semantic-release，由提交信息决定这次推送要不要发版。
+# 推送到 main 时运行 semantic-release，由提交信息决定这次推送要不要发版；PR 上也会运行，
+# 其中的 release-guard 作业是 main 的必需检查。
 # 发布只落在 GitHub：标签 + Release + CHANGELOG，插件包 tarball 作为 Release 附件。
 # 不发布到 npm；安装用 Release 附件或 checkout，见 docs/RELEASE.md。
 on:
@@ -40,6 +41,26 @@ jobs:
                   node --check packages/dsh-session-read-state/client.js
                   node --check packages/dsh-session-read-state/index.js
                   npx commitlint --from "$(git rev-parse HEAD~1)" --to HEAD --verbose
+
+    # 保护检查：本作业必须先通过，main 才能合并（见仓库分支保护设置）。
+    # 保证进入 main 的代码与提交信息都不必等发版时才报错。
+    guard:
+        name: release-guard
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+            - run: npm ci
+            - name: Validate manifests and entries
+              run: |
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/package.json', 'utf8'))"
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/locale/zh.json', 'utf8'))"
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/locale/en.json', 'utf8'))"
+                  node --check packages/dsh-session-read-state/client.js
+                  node --check packages/dsh-session-read-state/index.js
 
     release:
         name: semantic-release
