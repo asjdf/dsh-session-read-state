@@ -455,6 +455,25 @@ window.__ModuleLoader__.load({
         ]);
         const readIcon = eyeIcon('read');
         const unreadIcon = eyeIcon('unread');
+        // One mark, plus the notice that reports it. Every mark answers with a
+        // notice because the pill is only visible on rows currently drawn (a
+        // collapsed group or another filter hides it), and because Undo needs
+        // somewhere to live: it puts back the mark that was there before, not
+        // "no mark". The menu closes before the notice shows, so a throwing
+        // notify must not undo the mark that already landed.
+        const applyMark = (sessionId, entry, toast) => {
+          const previous = marks.get(sessionId);
+          setMark(sessionId, entry);
+          try {
+            ctx.contextMenus.notify(t(toast), true, {
+              label: t('toast.undo'),
+              run: () => setMark(sessionId, previous),
+              failureLabel: t('toast.undoFailed'),
+            });
+          } catch (error) {
+            console.warn('session-read-state: notice unavailable:', error);
+          }
+        };
         // One row over the captured Session, after Fork and before Copy Session
         // ID, naming the action the Session's current state calls for.
         ctx.effect(() => ctx.contextMenus.register({
@@ -470,14 +489,14 @@ window.__ModuleLoader__.load({
                 id: 'mark-read',
                 label: t('menu.markRead'),
                 icon: { key: 'session-read-state.read' },
-                run: () => apply(sessionId, { state: 'read', at: updatedAt(sessionId) ?? Date.now() }, 'toast.read'),
+                run: () => applyMark(sessionId, { state: 'read', at: updatedAt(sessionId) ?? Date.now() }, 'toast.read'),
               }];
             }
             return [{
               id: 'mark-unread',
               label: t('menu.markUnread'),
               icon: { key: 'session-read-state.unread' },
-              run: () => apply(sessionId, { state: 'unread' }, 'toast.unread'),
+              run: () => applyMark(sessionId, { state: 'unread' }, 'toast.unread'),
             }];
           },
         }), 'session-read-state: menu rows');
