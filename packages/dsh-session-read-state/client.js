@@ -32,14 +32,12 @@ window.__ModuleLoader__.load({
     // React.
     const NS = 'sessionReadState';
     const STORAGE_KEY = 'dsh-session-read-state:v1';
-    const PILL_ATTR = 'data-dsh-read-state-pill';
-    const CELL_ATTR = 'data-dsh-read-state-cell';
-    const QUIET_ATTR = 'data-dsh-read-state-quiet';
+    const DOT_ATTR = 'data-dsh-read-state-dot';
 
     const zh = {
       'meta.title': '会话已读标记',
       'meta.description':
-        '在侧栏右键点击会话（或点行末的“…”），一键标为已读或未读；未读的会话在标题旁显示“新”标记，标为已读会收起该会话“已完成”的提示直到再次打开。标记保存在本浏览器中，不会写入会话记录，也不影响模型看到的内容。',
+        '在侧栏右键点击会话（或点行末的“…”），一键标为已读或未读；未读的会话在行首显示一个圆点，标为已读后圆点隐藏，打开会话即视为已读。标记只保存在本浏览器中，不会写入会话记录，也不影响模型看到的内容。',
       'menu.markRead': '标为已读会话',
       'menu.markUnread': '标为未读会话',
       'menu.icon': '会话已读标记',
@@ -47,13 +45,11 @@ window.__ModuleLoader__.load({
       'toast.unread': '已标为未读',
       'toast.undo': '撤销',
       'toast.undoFailed': '无法撤销，请重试',
-      'pill.unread': '新',
-      'pill.unreadLabel': '已标记为未读',
     };
     const en = {
       'meta.title': 'Session read state',
       'meta.description':
-        'Right-click a session in the sidebar (or use its "..." menu) to mark it read or unread; unread sessions show a "New" pill beside the title, and a read mark hides that session\'s "done" prompt until you open it again. Marks stay in this browser, nothing is written to the session log, and the model never sees them.',
+        'Right-click a session in the sidebar (or use its "..." menu) to mark it read or unread. An unread session keeps a dot at the start of its row; marking it read hides the dot, and opening the session counts as read. Marks stay in this browser, nothing is written to the session log, and the model never sees them.',
       'menu.markRead': 'Mark session read',
       'menu.markUnread': 'Mark session unread',
       'menu.icon': 'Session read state',
@@ -61,16 +57,14 @@ window.__ModuleLoader__.load({
       'toast.unread': 'Marked as unread',
       'toast.undo': 'Undo',
       'toast.undoFailed': 'Could not undo, retry',
-      'pill.unread': 'New',
-      'pill.unreadLabel': 'Marked as unread',
     };
 
     // ---- mark store -------------------------------------------------------
     //
-    // A read mark is stored as a read watermark: the Session's `updatedAt`
-    // when the mark was made. It covers the finished-turn signal while that
-    // value stands and lifts as soon as a newer turn moves it, so the mark
-    // never needs to observe the moment a turn finishes.
+    // One mark per Session: `read` hides that row's dot, `unread` shows the
+    // unread dot even when no turn finished. DSH's own finished-but-unviewed
+    // fact stays untouched underneath, which is why the opposite mark brings
+    // the dot straight back. Opening the Session clears the mark.
 
     let marks = new Map();
     const listeners = new Set();
@@ -133,28 +127,19 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Apply the facts the Client already publishes. Only ever clears marks:
-     * a Session open in the main view is read for good, and a read watermark
-     * lifts once its Session moves past the turn it covered. DSH's own
-     * completion flag needs no sweep — it only feeds {@link quiet}, which
-     * follows it live — so callers may omit the status snapshot.
+     * Drop the marks that have been read for good: a Session open in the main
+     * view is being looked at, so neither a read nor an unread mark outlives
+     * that.
      * @param open - Session ids retained by the main view.
-     * @param updatedAt - Session id -> latest activity timestamp.
      */
-    function reconcile(open, updatedAt) {
+    function reconcile(open) {
       let next = null;
-      for (const [id, entry] of marks) {
-        const stale = entry.state === 'read' && (updatedAt(id) ?? 0) > entry.at;
-        if (!open.has(id) && !stale) continue;
+      for (const id of marks.keys()) {
+        if (!open.has(id)) continue;
         next = next ?? new Map(marks);
         next.delete(id);
       }
       if (next !== null) commit(next);
-    }
-
-    function markedRead(sessionId, updatedAt) {
-      const entry = marks.get(sessionId);
-      return entry !== undefined && entry.state === 'read' && !((updatedAt(sessionId) ?? 0) > entry.at);
     }
 
     function markedUnread(sessionId) {
@@ -163,25 +148,55 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Whether the row's finished-but-unviewed signal should be hidden. Only
-     * that one signal: the row shows an approval, a question, or a running
-     * subagent in the same cell and ranks it above "done", so a row with any
-     * of those keeps its cell whatever the mark says.
+     * The finished-but-unviewed fact this Session shows right now, and whether
+     * the overlay may replace it with its own dot. A Session that is asking
+     * for an approval or an answer, or still has a subagent running, shows that
+     * live state instead, so the overlay leaves those rows alone.
      * @param sessionId - the row's Session.
      * @param statuses - unified Session status snapshot, when available.
-     * @param updatedAt - Session id -> latest activity timestamp.
+     * @returns `{ done, overlay }`.
      */
-    function quiet(sessionId, statuses, updatedAt) {
-      if (!markedRead(sessionId, updatedAt)) return false;
+    /**
+     * Whether DSH is drawing a live marker for this row (an approval, a
+     * question, a running subagent), which the unread dot must not cover.
+     * @param sessionId - the row's Session.
+     * @param statuses - unified Session status snapshot, when available.
+     * @returns whether the row's marker is live.
+     */
+    function liveState(sessionId, statuses) {
       const status = statuses === undefined ? undefined : statuses.get(sessionId);
-      if (status === undefined || status.completionUnread !== true) return false;
-      return status.pendingInteraction === undefined && status.running !== true;
+      if (status === undefined) return false;
+      return status.pendingInteraction !== undefined || status.running === true;
     }
 
-    /** Whether the row reads unread: its own mark, otherwise DSH's fact. */
-    function unread(sessionId, statuses, updatedAt) {
-      if (markedUnread(sessionId)) return true;
-      return !quiet(sessionId, statuses, updatedAt) && completionUnread(statuses, sessionId);
+    function completion(sessionId, statuses) {
+      const status = statuses === undefined ? undefined : statuses.get(sessionId);
+      if (status === undefined) return { done: false, overlay: false };
+      const done = status.completionUnread === true;
+      const overlay = done && status.pendingInteraction === undefined && status.running !== true;
+      return { done, overlay };
+    }
+
+    /** The stored mark of one Session, or undefined. */
+    function markOf(sessionId) {
+      return marks.get(sessionId);
+    }
+
+    /**
+     * Whether the row shows the unread dot. An explicit mark wins over the
+     * fact underneath: a row marked read hides its dot even while DSH still
+     * reports the finished turn as unviewed, and a row marked unread shows it
+     * even when no turn finished. Without a mark, DSH's own fact decides, so
+     * a Session that finished while the user was elsewhere reads unread
+     * without any interaction.
+     * @param sessionId - the row's Session.
+     * @param statuses - unified Session status snapshot, when available.
+     * @returns whether the row shows an unread dot.
+     */
+    function unread(sessionId, statuses) {
+      const mark = markOf(sessionId);
+      if (mark !== undefined) return mark.state === 'unread';
+      return completionUnread(statuses, sessionId);
     }
 
     readStorage();
@@ -237,71 +252,62 @@ window.__ModuleLoader__.load({
       return document.querySelectorAll('[role="tree"] > [role="treeitem"][data-row-key^="session:"]');
     }
 
-    const PILL_STYLE = [
-      'flex:none',
-      'margin-inline-start:6px',
-      'padding:0 5px',
-      'height:16px',
-      'min-width:16px',
+    const DOT_STYLE = [
+      'width:8px',
+      'height:8px',
+      'border-radius:50%',
+      'display:block',
       'box-sizing:border-box',
-      'display:inline-flex',
-      'align-items:center',
-      'justify-content:center',
-      'border-radius:8px',
-      'font-size:10px',
-      'line-height:16px',
-      'white-space:nowrap',
-      'color:var(--dsw-alias-brand-primary)',
-      'background:var(--dsw-alias-bg-layer-2)',
+      'background:var(--dsw-alias-brand-primary)',
     ].join(';');
 
     /**
-     * Show or drop the pill of one title cell. The pill is a DOM node, not a
-     * React element, so a re-render of the row keeps it; the observer below
-     * notices when React replaced the title span and paints a fresh one.
-     * @param cell - the row's title cell.
-     * @param text - pill text, or null to remove the pill.
+     * Paint one row's leading cell. The cell's children belong to React, so
+     * this writes the cell's own marker attribute and appends one dot of its
+     * own; a re-render that drops the dot is repaired by the observer.
+     * @param cell - the row's leading status cell.
+     * @param show - whether the row shows the unread dot.
+     * @param takeMarker - whether the dot takes the cell's seat from DSH's own
+     *   finished marker (false while DSH draws a live state there).
      */
-    function paintCell(cell, text) {
-      const existing = cell.querySelector(`:scope > span[${PILL_ATTR}]`);
-      if (text === null) {
+    function paintDot(cell, show, takeMarker) {
+      const existing = cell.querySelector(`:scope > span[${DOT_ATTR}]`);
+      if (!show) {
         if (existing !== null) existing.remove();
-        if (cell.hasAttribute(CELL_ATTR)) cell.removeAttribute(CELL_ATTR);
+        if (cell.getAttribute(DOT_ATTR) === 'true') {
+          for (const child of cell.children) child.style.display = '';
+          cell.removeAttribute(DOT_ATTR);
+        }
         return;
       }
-      if (existing !== null) {
-        if (existing.textContent !== text) existing.textContent = text;
-        return;
+      if (existing !== null) return;
+      if (takeMarker) {
+        // DSH's own marker lives in this cell; the unread dot replaces it so
+        // the row keeps one marker, in one place.
+        if (cell.getAttribute(DOT_ATTR) !== 'true') {
+          cell.setAttribute(DOT_ATTR, 'true');
+          for (const child of cell.children) child.style.display = 'none';
+        }
       }
-      const title = cell.firstElementChild;
-      if (title === null) return;
-      const pill = document.createElement('span');
-      pill.setAttribute(PILL_ATTR, '');
-      pill.setAttribute('aria-hidden', 'true');
-      pill.setAttribute('style', PILL_STYLE);
-      pill.textContent = text;
-      cell.setAttribute(CELL_ATTR, '');
-      title.after(pill);
+      cell.appendChild(makeDot());
     }
 
-    /**
-     * Hide or restore the row's status cell. A row whose finished-but-unviewed
-     * status is covered by a read mark keeps its 16px cell (so the title does
-     * not move) but paints nothing in it; the cell's child is React's, so the
-     * plugin only writes the visibility of the cell itself.
-     * @param cell - the row's status cell.
-     * @param hidden - whether the row's unviewed signal is covered.
-     */
-    function paintStatusCell(cell, hidden) {
-      if (cell === null) return;
-      if (hidden) {
-        if (cell.getAttribute(QUIET_ATTR) === 'true') return;
-        cell.setAttribute(QUIET_ATTR, 'true');
-        cell.style.visibility = 'hidden';
-      } else if (cell.hasAttribute(QUIET_ATTR)) {
-        cell.removeAttribute(QUIET_ATTR);
-        cell.style.visibility = '';
+    /** The plugin's own dot; its color and size are the theme's, styled inline. */
+    function makeDot() {
+      const dot = document.createElement('span');
+      dot.setAttribute(DOT_ATTR, 'dot');
+      dot.setAttribute('aria-hidden', 'true');
+      dot.setAttribute('style', DOT_STYLE);
+      return dot;
+    }
+
+    /** Take the plugin's marker off a cell it no longer decorates. */
+    function clearDot(cell) {
+      cell.querySelectorAll(`:scope > span[${DOT_ATTR}]`).forEach((dot) => dot.remove());
+      if (cell.getAttribute(DOT_ATTR) === 'true') {
+        for (const child of cell.children) child.style.display = '';
       }
+      cell.removeAttribute(DOT_ATTR);
     }
 
     // ---- client plugin ----------------------------------------------------
@@ -326,10 +332,6 @@ window.__ModuleLoader__.load({
           const source = statusSource();
           return source === undefined ? undefined : source.getSnapshot();
         };
-        const updatedAt = (sessionId) => {
-          const summary = ctx.sessions.list.getSnapshot().byId[sessionId];
-          return summary === undefined ? undefined : summary.updatedAt;
-        };
         const openIds = () => {
           const snapshot = ctx.sessions.list.getSnapshot();
           const open = new Set();
@@ -338,7 +340,7 @@ window.__ModuleLoader__.load({
           }
           return open;
         };
-        const sync = () => reconcile(openIds(), updatedAt);
+        const sync = () => reconcile(openIds());
         /**
          * The row's title for a captured menu target: the controller's own
          * title, else the text the row draws (a Session the list has not
@@ -354,10 +356,10 @@ window.__ModuleLoader__.load({
           return cell === null ? '' : (cell.textContent ?? '').trim();
         };
 
-        // The list reports both facts that clear a mark: a Session landing in
-        // the main view, and a finished turn moving its `updatedAt`. Both
-        // subscriptions repaint too: the status snapshot can flip between
-        // "done" and a live state without touching the page tree.
+        // The list reports the fact that clears a mark: a Session landing in
+        // the main view. Both subscriptions repaint too, because DSH's own
+        // fact can flip between "done" and a live state without touching the
+        // page tree.
         let repaint = () => {};
         ctx.effect(() => ctx.sessions.list.subscribe(() => {
           sync();
@@ -482,14 +484,15 @@ window.__ModuleLoader__.load({
           order: 350,
           observe: () => [store],
           resolve: ({ sessionId }) => {
-            const read = markedUnread(sessionId)
-              || !(markedRead(sessionId, updatedAt) || completionUnread(statuses(), sessionId));
-            if (read) {
+            // A row that reads unread offers the read action, and one that is
+            // already read offers the unread action; either way the mark
+            // replaces DSH's own fact for as long as it lasts.
+            if (unread(sessionId, statuses())) {
               return [{
                 id: 'mark-read',
                 label: t('menu.markRead'),
                 icon: { key: 'session-read-state.read' },
-                run: () => applyMark(sessionId, { state: 'read', at: updatedAt(sessionId) ?? Date.now() }, 'toast.read'),
+                run: () => applyMark(sessionId, { state: 'read' }, 'toast.read'),
               }];
             }
             return [{
@@ -513,16 +516,10 @@ window.__ModuleLoader__.load({
           console.warn('session-read-state: menu icons unavailable:', error);
         }
 
-        // The row decorations: the pill on unread rows, and the hidden status
-        // cell for a finished turn a read mark covers. A MutationObserver
-        // rather than slot entries: React owns every cell of the row and would
-        // drop a child it did not render, so both are re-applied after each
-        // re-render instead of registered as components.
-        //
-        // Only rows that carry something to draw are touched: decoration is
-        // removed from them when their state clears, and an undecorated row is
-        // never written to. A collapsed group, another filter, or an archived
-        // row simply gets its decoration when it is next on screen.
+        // The row marker. The sidebar draws nothing for an idle or read row,
+        // so this pass owns the leading 16px cell: a dot for an unread row, an
+        // empty cell for a read one, and never a second dot beside a live state
+        // DSH is already drawing (an approval, a question, a running subagent).
         let frame;
         let observer;
         const flush = () => {
@@ -531,17 +528,21 @@ window.__ModuleLoader__.load({
           let decorated = false;
           for (const row of rows()) {
             const sessionId = sessionIdOf(row);
-            const title = titleCell(row);
-            if (sessionId === null || title === null) continue;
-            const hidden = quiet(sessionId, source, updatedAt);
-            const unreadNow = unread(sessionId, source, updatedAt);
-            const marked = hidden || unreadNow || title.hasAttribute(CELL_ATTR);
-            if (!marked) continue;
+            const cell = statusCell(row);
+            if (sessionId === null || cell === null) continue;
+            const unreadNow = unread(sessionId, source);
+            const marked = markOf(sessionId);
+            const live = liveState(sessionId, source);
+            const touched = marked !== undefined
+              || unreadNow
+              || cell.hasAttribute(DOT_ATTR);
+            if (!touched) continue;
             decorated = true;
-            paintCell(title, unreadNow ? t('pill.unread') : null);
-            paintStatusCell(statusCell(row), hidden);
+            // A row DSH is drawing for a live state keeps that marker; the
+            // unread dot only takes the finished-state seat.
+            paintDot(cell, unreadNow, !live);
           }
-          // Watch the page from the first page that carries decoration on, so
+          // Watch the page from the first page that carries a mark on, so
           // idle lists cost no observer work.
           if (decorated && observer === undefined) watch();
         };
@@ -579,13 +580,7 @@ window.__ModuleLoader__.load({
             if (observer !== undefined) observer.disconnect();
             observer = undefined;
             if (frame !== undefined) window.cancelAnimationFrame(frame);
-            document.querySelectorAll(`[${PILL_ATTR}]`).forEach((pill) => pill.remove());
-            document.querySelectorAll(`[${CELL_ATTR}]`).forEach((cell) => cell.removeAttribute(CELL_ATTR));
-            document.querySelectorAll(`[${QUIET_ATTR}]`).forEach((cell) => {
-              cell.removeAttribute(QUIET_ATTR);
-              cell.style.visibility = '';
-            });
-          };
+            document.querySelectorAll('[role="tree"] > [role="treeitem"] > span').forEach((cell) => clearDot(cell));          };
         }, 'session-read-state: row decoration');
       },
     };
