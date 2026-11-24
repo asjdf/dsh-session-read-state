@@ -36,6 +36,11 @@ dsh plugin add ./dsh-session-read-state-X.Y.Z.tgz
 
 完整的变更流程、预发布分支与失败回退见 [docs/RELEASE.md](docs/RELEASE.md)。
 
+## 功能、限制与开发
+
+插件做什么、标记怎么清、有哪些限制、图标许可，以及目录结构，见
+[packages/dsh-session-read-state/README.md](packages/dsh-session-read-state/README.md)。
+
 ## 仓库结构
 
 ```text
