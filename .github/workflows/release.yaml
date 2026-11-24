@@ -1,0 +1,60 @@
+# From: https://github.com/asjdf/semantic-release-go-demo
+name: Release
+
+# 每次推送到 main 都会运行 semantic-release，由提交信息决定这次推送要不要发版。
+# 当前只发 GitHub（标签 + Release + CHANGELOG）；要同时发布到 npm，见 docs/RELEASE.md。
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: write  # 打标签、创建 GitHub Release、写回 CHANGELOG
+    issues: write  # 在已解决的 issue 上评论（本仓已关闭该行为，仅保留最小权限）
+    pull-requests: write
+
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    checks:
+        name: checks
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+            - run: npm ci
+            # 插件包清单与前端入口至少要被解析一次，避免发布一个装不上的版本。
+            - name: Validate the plugin package
+              run: |
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/package.json', 'utf8'))"
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/locale/zh.json', 'utf8'))"
+                  node -e "JSON.parse(require('node:fs').readFileSync('packages/dsh-session-read-state/locale/en.json', 'utf8'))"
+                  node --check packages/dsh-session-read-state/client.js
+                  node --check packages/dsh-session-read-state/index.js
+                  npx commitlint --from "$(git rev-parse HEAD~1)" --to HEAD --verbose
+
+    release:
+        name: semantic-release
+        needs: checks
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+            - run: npm ci
+            - name: Semantic Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: npm run release

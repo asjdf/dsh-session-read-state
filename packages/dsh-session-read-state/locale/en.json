@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Session read state",
+    "description": "Right-click a Session in the sidebar, or use the \"More\" button at the end of its row, and the Session menu gains one row: **Mark session read** or **Mark session unread**\n\nAn unread Session shows a **New** pill beside its title; marking a Session read hides its \"done\" prompt until you open it once.\n\nMarks live in this browser only. Nothing is written to the session log and the model never sees them, so a mark does not follow you to another browser or device.\n\nLatest version: [release notes](https://github.com/asjdf/dsh-session-read-state/releases)",
+    "detail": "docs/DETAIL.md"
+  }
+}

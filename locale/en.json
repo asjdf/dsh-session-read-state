@@ -1,7 +1,0 @@
-{
-  "meta": {
-    "title": "Session read state",
-    "description": "Right-click a session in the sidebar, or use the \"more\" button at the end of its row, to mark it read or unread. An unread session shows a \"New\" pill beside its title until you open it or mark it read again; a read mark hides that session's \"done\" prompt until you open it once. Marks stay in this browser, nothing is written to the session log, and the model never sees them.",
-    "detail": "docs/DETAIL.md"
-  }
-}
