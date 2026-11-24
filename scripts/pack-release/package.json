@@ -1,0 +1,7 @@
+{
+    "name": "pack-release",
+    "version": "0.0.0",
+    "private": true,
+    "description": "semantic-release plugin: pack the plugin tarball as a GitHub Release asset",
+    "main": "index.cjs"
+}
